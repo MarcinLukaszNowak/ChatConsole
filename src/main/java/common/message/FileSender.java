@@ -9,21 +9,24 @@ import java.net.Socket;
 public class FileSender implements Runnable {
 
     private Socket socket;
-    private String filePath;
+//    private String filePath;
 
     public void sendFile() {
-        InputStream fileInputStream = null;
-        DataOutputStream outputStream = null;
-        String fileName = "new" + filePath; //filePath.substring(filePath.lastIndexOf("/"));
+//        InputStream fileInputStream = null;
+//        DataOutputStream outputStream = null;
+//        String fileName = "new" + filePath; //filePath.substring(filePath.lastIndexOf("/"));
         try {
-            outputStream = new DataOutputStream(socket.getOutputStream());
-            outputStream.writeUTF(fileName);
-            File file = new File(filePath);
+            DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
+            DataInputStream dataInputStream = new DataInputStream(socket.getInputStream());
+            String fileName = dataInputStream.readUTF();
+
+            File file = new File(fileName);
             byte[] fileBytes = new byte[(int) file.length()];
-            fileInputStream = new FileInputStream(file);
+            InputStream fileInputStream = new FileInputStream(file);
             fileInputStream.read(fileBytes, 0, fileBytes.length);
             outputStream.write(fileBytes, 0, fileBytes.length);
 
+            dataInputStream.close();
             outputStream.close();
             fileInputStream.close();
             socket.close();
@@ -31,17 +34,6 @@ public class FileSender implements Runnable {
 
         } catch (IOException e) {
 
-        } finally {
-            try {
-                if (fileInputStream != null) {
-                    fileInputStream.close();
-                }
-                if (outputStream != null) {
-                    outputStream.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
         }
     }
 

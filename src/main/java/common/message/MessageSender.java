@@ -1,5 +1,6 @@
 package common.message;
 
+import client.ClientDownloadFile;
 import client.ClientSendFile;
 import common.configuration.Conf;
 import javafx.util.Pair;
@@ -32,6 +33,8 @@ public class MessageSender implements Runnable {
                     String param = commandAndParam.getValue();
                     if (Command.SEND_FILE.getCommandString().equals(command)) {
                         new Thread(new ClientSendFile(param)).start();
+                    } else if (Command.DOWNLOAD_FILE.getCommandString().equals(command)) {
+                        new Thread(new ClientDownloadFile(param)).start();
                     }
                 }
             }
