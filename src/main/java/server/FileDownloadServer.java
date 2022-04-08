@@ -33,7 +33,7 @@ public class FileDownloadServer {
     }
 
     public static void main(String[] args) {
-        FileDownloadServer fileDownloadServer = new FileDownloadServer(Conf.FILE_SERVER_PORT);
+        FileDownloadServer fileDownloadServer = new FileDownloadServer(Conf.FILE_DOWNLOAD_SERVER_PORT);
         fileDownloadServer.listen();
     }
 

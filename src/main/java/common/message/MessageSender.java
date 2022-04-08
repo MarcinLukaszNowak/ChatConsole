@@ -1,5 +1,6 @@
 package common.message;
 
+import client.ClientSendFile;
 import common.configuration.Conf;
 import javafx.util.Pair;
 import lombok.AllArgsConstructor;
@@ -30,9 +31,7 @@ public class MessageSender implements Runnable {
                     String command = commandAndParam.getKey();
                     String param = commandAndParam.getValue();
                     if (Command.SEND_FILE.getCommandString().equals(command)) {
-                        Socket fileSocket = new Socket(Conf.HOST, Conf.FILE_SERVER_PORT);
-                        Thread thread = new Thread(new FileSender(fileSocket, param));
-                        thread.start();
+                        new Thread(new ClientSendFile(param)).start();
                     }
                 }
             }
