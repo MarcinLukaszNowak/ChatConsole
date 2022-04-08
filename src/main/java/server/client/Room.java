@@ -1,6 +1,7 @@
-package server;
+package server.client;
 
 import common.configuration.Conf;
+import common.file.FilePathHelper;
 import lombok.Getter;
 
 import java.io.File;
@@ -22,12 +23,21 @@ public class Room {
     public Room(Integer id, String name) {
         this.id = id;
         this.name = name;
-        this.conversationFile = new File(name + Conf.CONVERSATION_FILE_EXTENSION);
         try {
-            conversationFile.createNewFile();
+            this.conversationFile = createChatFolderAndHistoryFile(name);
         } catch (IOException e) {
-
+            e.printStackTrace();
         }
+    }
+
+    private File createChatFolderAndHistoryFile(String roomName) throws IOException {
+        File directory = new File(FilePathHelper.createDirByRoomName(roomName));
+        if (!directory.exists()) {
+            directory.mkdirs();
+        }
+        File history = new File(directory + Conf.PATH_SLASH + Conf.CONVERSATION_FILE_NAME + Conf.CONVERSATION_FILE_EXTENSION);
+        history.createNewFile();
+        return history;
     }
 
     @Override

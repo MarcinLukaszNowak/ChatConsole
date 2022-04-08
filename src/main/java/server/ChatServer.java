@@ -1,28 +1,26 @@
 package server;
 
 import common.configuration.Conf;
-import common.message.MessageSender;
+import common.logger.Logg;
+import common.message.SimpleMessage;
 import lombok.Getter;
+import server.client.ClientThread;
+import server.client.Room;
 
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ChatServer {
 
     @Getter
     private ServerSocket serverSocket;
-    private Socket clientSocket;
-    private PrintWriter writer;
-    private BufferedReader reader;
-    private DataInputStream inputStream;
-    private List<ClientThread> chatClients = new ArrayList<>();
     @Getter
     private HashMap<Integer, Room> rooms = new HashMap<>();
     private int maxRoomId;
+    private final Map<ClientThread, Thread> clients = new ConcurrentHashMap<>();
 
 
     public ChatServer(int port) {
@@ -31,10 +29,9 @@ public class ChatServer {
             rooms.put(mainRoom.getId(), mainRoom);
             maxRoomId = 0;
             serverSocket = new ServerSocket(port);
-            System.out.println("Chat server connected on port: " + port);
+            Logg.info("Chat server connected on port: " + port);
         } catch (IOException e) {
-            System.out.println("Chat server connection failed");
-            System.out.println(e. getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -44,9 +41,11 @@ public class ChatServer {
                 Socket socket = serverSocket.accept();
                 Room mainRoom = rooms.get(Conf.MAIN_ROOM_ID);
                 ClientThread clientThread = new ClientThread(this, socket, mainRoom);
-                new Thread(clientThread).start();
+                Thread newClient = new Thread(clientThread);
+                clients.put(clientThread, newClient);
+                newClient.start();
             } catch (IOException e) {
-                System.out.println(e.getMessage());
+                e.printStackTrace();
             }
         }
     }
@@ -56,7 +55,13 @@ public class ChatServer {
         Room newRoom = new Room(maxRoomId, roomName);
         rooms.put(maxRoomId, newRoom);
         rooms.get(Conf.MAIN_ROOM_ID).getParticipants()
-                .forEach(p -> MessageSender.serverMessage(p.getSocket(), "there is a new room: " + newRoom));
+                .forEach(p -> SimpleMessage.serverMessage(p.getSocket(), "there is a new room: " + newRoom));
+    }
+
+    public void closeClientThread(ClientThread clientThread) {
+        Thread thread = clients.get(clientThread);
+        clients.remove(clientThread);
+        thread.interrupt();
     }
 
 }

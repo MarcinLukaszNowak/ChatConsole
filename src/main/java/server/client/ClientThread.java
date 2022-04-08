@@ -1,22 +1,26 @@
-package server;
+package server.client;
 
 import common.configuration.Conf;
-import common.message.MessageSender;
+import common.file.FilePathHelper;
+import common.message.SimpleMessage;
 import javafx.util.Pair;
 import lombok.Getter;
 import lombok.Setter;
 import common.command.Command;
+import server.ChatServer;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
-import java.util.List;
+import java.util.stream.Collectors;
 
 public class ClientThread implements Runnable {
 
@@ -25,7 +29,6 @@ public class ClientThread implements Runnable {
     private String name;
     @Getter
     private Socket socket;
-    private List<ClientThread> chatClients;
     private ChatServer server;
     private Room room;
 
@@ -43,6 +46,9 @@ public class ClientThread implements Runnable {
                     handleCommand(message);
                 } else {
                     broadcast(message);
+                }
+                if (Command.LEAVE_CHAT.equalsCommand(message)) {
+                    return;
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -77,37 +83,49 @@ public class ClientThread implements Runnable {
         Pair<String, String> commandAndParam = Command.splitToCommandAndParam(message);
         String command = commandAndParam.getKey();
         String param = commandAndParam.getValue();
-        if (Command.HELP.getCommandString().equals(command)) {
-            MessageSender.directMessage(this.socket, Command.getAllCommands());
-        } else if (Command.NEW_ROOM.getCommandString().equals(command)) {
+        if (Command.HELP.equalsCommand(command)) {
+            SimpleMessage.directMessage(this.socket, Command.getAllCommands());
+        } else if (Command.NEW_ROOM.equalsCommand(command)) {
             this.server.newRoom(param);
-        } else if (Command.JOIN_ROOM.getCommandString().equals(command)) {
+        } else if (Command.JOIN_ROOM.equalsCommand(command)) {
             joinRoom(param);
-        } else if (Command.ROOM_LIST.getCommandString().equals(command)) {
-            getRoomList();
-        } else if (Command.SEND_FILE.getCommandString().equals(command)) {
-            downloadFileByServer();
-        } else if (Command.DOWNLOAD_FILE.getCommandString().equals(command)) {
-
+        } else if (Command.ROOM_LIST.equalsCommand(command)) {
+            sendRoomList();
+        } else if (Command.LEAVE_CHAT.equalsCommand(command)) {
+            leaveChat();
+        } else if (Command.AVAILABLE_FILES.equalsCommand(command)) {
+            sendFileList();
         } else {
-            MessageSender.serverMessage(this.socket, "command: '" + commandAndParam.getKey() + "' doesn't exist. Type '" + Command.HELP.getCommandString() + "' to get list of commands");
+            SimpleMessage.serverMessage(this.socket, "command: '" + commandAndParam.getKey() + "' doesn't exist. Type '" + Command.HELP.getCommandString() + "' to get list of commands");
         }
     }
 
-    private void downloadFileByServer() {
-//        MessageReceiver.receiveFile(socket);
+    private void sendFileList() {
+        File[] files = new File(FilePathHelper.createDirByRoomName(room.getName())).listFiles();
+        String fileList = "Files:\n";
+        if (files != null) {
+            fileList += Arrays.stream(files)
+                    .map(File::getName)
+                    .collect(Collectors.joining("\n"));
+        }
+        SimpleMessage.directMessage(socket, fileList);
     }
 
-    private void sendFile() {
-//        MessageSender.sendFile(this.socket, "ex.txt");
-//        MessageReceiver.receiveFile(this.socket);
+    private void leaveChat() {
+        try {
+            room.getParticipants().remove(this);
+            socket.close();
+            server.closeClientThread(this);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    private void getRoomList() {
+    private void sendRoomList() {
         StringBuilder sb = new StringBuilder();
         server.getRooms()
                 .forEach((key, value) -> sb.append("id: ").append(key).append(", name: ").append(value.getName()).append("\n"));
-        MessageSender.directMessage(this.socket, sb.toString());
+        SimpleMessage.directMessage(this.socket, sb.toString());
     }
 
     private void joinRoom(String roomId) {
@@ -116,11 +134,12 @@ public class ClientThread implements Runnable {
             Room joiningRoom = server.getRooms().get(Integer.valueOf(roomId));
             this.room = joiningRoom;
             joiningRoom.getParticipants().add(this);
-            MessageSender.serverMessage(this.socket, "joined " + room.toString());
+            SimpleMessage.serverMessage(this.socket, "joined " + room.toString());
+            SimpleMessage.directMessage(socket, Command.CLIENT_UPDATE_ROOM_NAME.getCommandString() + " " + room.getName()); // updates roomName in ChatClient
         } catch (NullPointerException e) {
-            MessageSender.serverMessage(this.socket, "room doesn't exist");
+            SimpleMessage.serverMessage(this.socket, "room doesn't exist");
         } catch (NumberFormatException e) {
-            MessageSender.serverMessage(this.socket, "wrong room id");
+            SimpleMessage.serverMessage(this.socket, "wrong room id");
         }
     }
 
@@ -131,10 +150,10 @@ public class ClientThread implements Runnable {
             DataInputStream inputStream = new DataInputStream(socket.getInputStream());
             this.name =  inputStream.readUTF();
             this.room.getParticipants().add(this);
-            MessageSender.serverMessage(socket, "Welcome " + name);
+            SimpleMessage.serverMessage(socket, "Welcome " + name + "! Type: '" + Command.HELP.getCommandString() + "' to get command list.");
             handleMessages(inputStream);
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            e.printStackTrace();
         }
     }
 

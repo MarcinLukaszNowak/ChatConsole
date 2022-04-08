@@ -1,7 +1,7 @@
-package server;
+package server.file;
 
 import common.configuration.Conf;
-import common.message.FileDownloader;
+import common.logger.Logg;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -14,10 +14,9 @@ public class FileDownloadServer {
     public FileDownloadServer(int port) {
         try {
             fileSocket = new ServerSocket(port);
-            System.out.println("File server connected on port: " + port);
+            Logg.info("File server connected on port: " + port);
         } catch (IOException e) {
-            System.out.println("File server connection failed");
-            System.out.println(e. getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -27,14 +26,9 @@ public class FileDownloadServer {
                 Socket socket = fileSocket.accept();
                 new Thread(new FileDownloader(socket)).start();
             } catch (IOException e) {
-                System.out.println(e.getMessage());
+                e.printStackTrace();
             }
         }
-    }
-
-    public static void main(String[] args) {
-        FileDownloadServer fileDownloadServer = new FileDownloadServer(Conf.FILE_DOWNLOAD_SERVER_PORT);
-        fileDownloadServer.listen();
     }
 
 }
