@@ -31,9 +31,9 @@ public class ChatServer {
             rooms.put(mainRoom.getId(), mainRoom);
             maxRoomId = 0;
             serverSocket = new ServerSocket(port);
-            System.out.println("Connected on port: " + port);
+            System.out.println("Chat server connected on port: " + port);
         } catch (IOException e) {
-            System.out.println("Connection failed");
+            System.out.println("Chat server connection failed");
             System.out.println(e. getMessage());
         }
     }

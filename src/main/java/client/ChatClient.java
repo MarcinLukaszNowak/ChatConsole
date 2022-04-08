@@ -21,6 +21,8 @@ public class ChatClient {
 
             MessageSender messageSender = new MessageSender(socket);
             new Thread(messageSender).start();
+
+
         } catch (IOException e) {
             System.out.println("nie udało się dołączyć");
         }

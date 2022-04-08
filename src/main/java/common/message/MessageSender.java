@@ -1,6 +1,9 @@
 package common.message;
 
+import common.configuration.Conf;
+import javafx.util.Pair;
 import lombok.AllArgsConstructor;
+import common.command.Command;
 
 import java.io.*;
 import java.net.Socket;
@@ -21,6 +24,17 @@ public class MessageSender implements Runnable {
                 input = new BufferedReader(new InputStreamReader(System.in));
                 message = input.readLine();
                 outputStream.writeUTF(message);
+
+                if (Command.isCommand(message)) {
+                    Pair<String, String> commandAndParam = Command.splitToCommandAndParam(message);
+                    String command = commandAndParam.getKey();
+                    String param = commandAndParam.getValue();
+                    if (Command.SEND_FILE.getCommandString().equals(command)) {
+                        Socket fileSocket = new Socket(Conf.HOST, Conf.FILE_SERVER_PORT);
+                        Thread thread = new Thread(new FileSender(fileSocket, param));
+                        thread.start();
+                    }
+                }
             }
         } catch (IOException e) {
             System.out.println(e.getStackTrace());
@@ -40,34 +54,6 @@ public class MessageSender implements Runnable {
         directMessage(socket, "[server]: " + message);
     }
 
-    public static void sendFile(Socket socket, String fullPath) {
-        InputStream fileInputStream = null;
-        OutputStream outputStream = null;
-        try {
-            fullPath = "ex.txt"; // todo
-            File file = new File(fullPath);
-            byte[] fileBytes = new byte[(int) file.length()];
-            fileInputStream = new FileInputStream(file);
-            fileInputStream.read(fileBytes, 0, fileBytes.length);
-            outputStream = socket.getOutputStream();
-            outputStream.write(fileBytes, 0, fileBytes.length);
-        } catch (FileNotFoundException e) {
 
-        } catch (IOException e) {
-
-        } finally {
-            try {
-                if (fileInputStream != null) {
-                    fileInputStream.close();
-                }
-                if (outputStream != null) {
-                    outputStream.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-    }
 
 }

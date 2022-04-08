@@ -3,7 +3,8 @@ package common.configuration;
 public class Conf {
 
     public static final String HOST = "localhost";
-    public static final int MAIN_PORT = 5000;
+    public static final int CHAT_SERVER_PORT = 5000;
+    public static final int FILE_SERVER_PORT = 7000;
     public static final String END_SESSION_COMMAND = "\\q";
     public static final String MESSAGE_DATETIME_FORMAT = "dd-MM-yyyy HH:mm:ss";
     public static final String HELLO_MESSAGE = "Hi! I've just joined the chat. Call me: ";

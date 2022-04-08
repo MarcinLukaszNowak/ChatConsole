@@ -1,15 +1,14 @@
 package server;
 
 import common.configuration.Conf;
-import common.message.MessageReceiver;
 import common.message.MessageSender;
+import javafx.util.Pair;
 import lombok.Getter;
 import lombok.Setter;
-import server.command.Command;
+import common.command.Command;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.file.Files;
@@ -40,7 +39,7 @@ public class ClientThread implements Runnable {
         while (true) {
             try {
                 String message = inputStream.readUTF();
-                if (message.length() > 2 && Conf.COMMAND_IDENTIFIER.equals(message.substring(0,2))) {
+                if (Command.isCommand(message)) {
                     handleCommand(message);
                 } else {
                     broadcast(message);
@@ -52,9 +51,6 @@ public class ClientThread implements Runnable {
     }
 
     private void broadcast(String message) {
-
-        System.out.println("gdzie ja jestem?");
-
         String messageDate = new SimpleDateFormat(Conf.MESSAGE_DATETIME_FORMAT).format(new Date());
         String outputMessage = messageDate + " [" + name + "]: " + message;
         try {
@@ -77,33 +73,34 @@ public class ClientThread implements Runnable {
                 });
     }
 
-    private void handleCommand(String command) {
-        String param = "";
-        if (command.contains(" ")) {
-            String[] commandParts = command.split(" ", 2);
-            command = commandParts[0];
-            param = commandParts[1];
-        }
-        if (Command.HELP.getCommandWithoutParam().equals(command)) {
+    private void handleCommand(String message) {
+        Pair<String, String> commandAndParam = Command.splitToCommandAndParam(message);
+        String command = commandAndParam.getKey();
+        String param = commandAndParam.getValue();
+        if (Command.HELP.getCommandString().equals(command)) {
             MessageSender.directMessage(this.socket, Command.getAllCommands());
-        } else if (Command.NEW_ROOM.getCommandWithoutParam().equals(command)) {
+        } else if (Command.NEW_ROOM.getCommandString().equals(command)) {
             this.server.newRoom(param);
-        } else if (Command.JOIN_ROOM.getCommandWithoutParam().equals(command)) {
+        } else if (Command.JOIN_ROOM.getCommandString().equals(command)) {
             joinRoom(param);
-        } else if (Command.ROOM_LIST.getCommandWithoutParam().equals(command)) {
+        } else if (Command.ROOM_LIST.getCommandString().equals(command)) {
             getRoomList();
-        } else if (Command.SEND_FILE.getCommandWithoutParam().equals(command)) {
-            sendFile();
-        } else if (Command.DOWNLOAD_FILE.getCommandWithoutParam().equals(command)) {
+        } else if (Command.SEND_FILE.getCommandString().equals(command)) {
+            downloadFileByServer();
+        } else if (Command.DOWNLOAD_FILE.getCommandString().equals(command)) {
 
         } else {
-            MessageSender.serverMessage(this.socket, "command: '" + command + "' doesn't exist. Type '" + Command.HELP.getCommandString() + "' to get list of commands");
+            MessageSender.serverMessage(this.socket, "command: '" + commandAndParam.getKey() + "' doesn't exist. Type '" + Command.HELP.getCommandString() + "' to get list of commands");
         }
     }
 
+    private void downloadFileByServer() {
+//        MessageReceiver.receiveFile(socket);
+    }
+
     private void sendFile() {
-        MessageSender.sendFile(this.socket, "ex.txt");
-        MessageReceiver.receiveFile(this.socket);
+//        MessageSender.sendFile(this.socket, "ex.txt");
+//        MessageReceiver.receiveFile(this.socket);
     }
 
     private void getRoomList() {
